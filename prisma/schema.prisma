@@ -1,0 +1,111 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum StatusContrato {
+  EM_PROPOSTA
+  GANHOU
+  EM_EXECUCAO
+  ENCERRADO
+  RENOVACAO
+}
+
+enum StatusMarco {
+  NAO_INICIADO
+  EM_ANDAMENTO
+  CONCLUIDO
+  ATRASADO
+}
+
+enum StatusEntrega {
+  PENDENTE
+  EM_ANDAMENTO
+  ENTREGUE
+  ATRASADA
+}
+
+enum Criticidade {
+  NORMAL
+  ATENCAO
+  CRITICO
+}
+
+model Contrato {
+  id        String          @id @default(cuid())
+  numero    String          @unique
+  cliente   String
+  orgao     String
+  objeto    String
+  processo  String?
+  valor     Decimal         @db.Decimal(14, 2)
+  inicio    DateTime
+  fim       DateTime
+  status    StatusContrato  @default(EM_PROPOSTA)
+
+  marcos    Marco[]
+  entregas  Entrega[]
+  alertas   Alerta[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contratos")
+}
+
+model Marco {
+  id           String       @id @default(cuid())
+  contratoId   String
+  contrato     Contrato     @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+
+  nome         String       // Kickoff, Plano de Trabalho, OS, Sprint, etc.
+  descricao    String?
+  responsavel  String?
+  prazo        DateTime
+  realizado    DateTime?
+  status       StatusMarco  @default(NAO_INICIADO)
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("marcos")
+}
+
+model Entrega {
+  id            String        @id @default(cuid())
+  contratoId    String
+  contrato      Contrato      @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+
+  ordemServico  String
+  produto       String
+  descricao     String?
+  pontosFuncao  Decimal?      @db.Decimal(10, 2)
+  horas         Decimal?      @db.Decimal(10, 2)
+  responsavel   String?
+  prazo         DateTime
+  status        StatusEntrega @default(PENDENTE)
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("entregas")
+}
+
+model Alerta {
+  id           String      @id @default(cuid())
+  contratoId   String
+  contrato     Contrato    @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+
+  mensagem     String
+  criticidade  Criticidade @default(NORMAL)
+  lido         Boolean     @default(false)
+
+  createdAt    DateTime    @default(now())
+
+  @@map("alertas")
+}
